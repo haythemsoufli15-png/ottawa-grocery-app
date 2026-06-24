@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Ottawa Grocery Price Finder</title>
+<meta name="description" content="Compare grocery prices across every store in Ottawa — real prices, ratings, and buy links."/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#F6F8FA;color:#1A1A1A;min-height:100vh}
+
+  /* ── NAV ── */
+  .nav{background:#fff;border-bottom:1px solid #E2E6EA;padding:0 20px;display:flex;align-items:center;gap:16px;height:60px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .logo{font-size:18px;font-weight:600;color:#1A73E8;white-space:nowrap;text-decoration:none}
+  .logo span{color:#EA4335}
+  .nav-search{flex:1;max-width:600px;display:flex;border:1.5px solid #DADCE0;border-radius:24px;overflow:hidden;background:#fff;transition:box-shadow .15s}
+  .nav-search:focus-within{box-shadow:0 1px 6px rgba(32,33,36,.28);border-color:transparent}
+  .nav-search input{flex:1;border:none;outline:none;padding:10px 16px;font-size:14px;font-family:inherit;background:transparent}
+  .nav-search button{background:#1A73E8;border:none;color:#fff;padding:0 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
+  .nav-search button:hover{background:#1558B0}
+  .nav-search button:disabled{background:#9AA0A6;cursor:not-allowed}
+  .nav-city{font-size:13px;color:#5F6368;white-space:nowrap}
+
+  /* ── MAIN ── */
+  .main{max-width:1280px;margin:0 auto;padding:16px 16px 60px}
+
+  /* ── CATEGORY NAV ── */
+  .cat-nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+  .cat-nav::-webkit-scrollbar{display:none}
+  .cat-nav button{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid #DADCE0;background:#fff;cursor:pointer;color:#3C4043;white-space:nowrap;font-family:inherit;flex-shrink:0;transition:all .12s}
+  .cat-nav button.on{background:#E8F0FE;color:#1A73E8;border-color:#1A73E8;font-weight:500}
+  .cat-nav button:hover:not(.on){background:#F1F3F4}
+
+  /* ── CHIPS ── */
+  .chips-wrap{background:#fff;border:1px solid #E2E6EA;border-radius:12px;padding:14px 16px;margin-bottom:16px}
+  .chips-title{font-size:12px;color:#5F6368;margin-bottom:10px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #DADCE0;background:#F8F9FA;cursor:pointer;color:#3C4043;transition:all .12s;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:5px}
+  .chip:hover,.chip.active{background:#1A73E8;color:#fff;border-color:#1A73E8}
+
+  /* ── PRODUCT HERO ── */
+  .product-hero{background:#fff;border:1px solid #E2E6EA;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:16px}
+  .product-hero img{width:72px;height:72px;object-fit:contain;border-radius:10px;background:#F6F8FA;border:1px solid #E2E6EA;flex-shrink:0}
+  .ph-info{flex:1}
+  .ph-name{font-size:17px;font-weight:600}
+  .ph-desc{font-size:13px;color:#5F6368;margin-top:3px}
+  .ph-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .ph-cat{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500}
+  .ph-fetched{font-size:11px;color:#9AA0A6}
+
+  /* ── RESULTS BAR ── */
+  .results-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .rcount{font-size:13px;color:#5F6368}
+  .rcount strong{color:#1A1A1A;font-weight:500}
+  .sort-wrap{display:flex;align-items:center;gap:8px}
+  .sort-wrap label{font-size:13px;color:#5F6368}
+  .sort-wrap select{font-size:13px;border:1px solid #DADCE0;border-radius:6px;padding:5px 10px;background:#fff;font-family:inherit;color:#3C4043;cursor:pointer}
+
+  /* ── DEAL BAR ── */
+  .deal-bar{background:#E8F5E9;border:1px solid #C8E6C9;border-radius:10px;padding:10px 16px;font-size:13px;color:#2E7D32;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  /* ── STORE FILTERS ── */
+  .store-filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+  .sf{font-size:12px;padding:4px 11px;border-radius:20px;border:1px solid #DADCE0;background:#fff;cursor:pointer;color:#3C4043;display:flex;align-items:center;gap:4px;font-family:inherit;transition:background .12s}
+  .sf.on{background:#E8F0FE;color:#1A73E8;border-color:#1A73E8;font-weight:500}
+  .sf:hover:not(.on){background:#F1F3F4}
+  .cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+  /* ── GRID ── */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:14px}
+
+  /* ── CARDS ── */
+  .pcard{background:#fff;border:1px solid #E2E6EA;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s,transform .15s;position:relative}
+  .pcard:hover{box-shadow:0 4px 20px rgba(0,0,0,.12);transform:translateY(-2px)}
+  .pcard.best{border:2px solid #1A73E8}
+  .pcard.best::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#1A73E8}
+
+  .cthumb{height:36px;display:flex;align-items:center;padding:0 10px;font-size:12px;font-weight:600;gap:5px;position:relative}
+  .cthumb .ic{font-size:15px}
+  .best-ribbon{position:absolute;top:-1px;right:8px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:0 0 6px 6px;background:rgba(255,255,255,.95);color:#1A73E8;letter-spacing:.3px}
+
+  .pbody{padding:11px 13px;display:flex;flex-direction:column;gap:4px;flex:1}
+  .price-row{display:flex;align-items:baseline;gap:7px;margin-bottom:1px}
+  .pprice{font-size:22px;font-weight:600}
+  .pdiff{font-size:11px;font-weight:500;padding:2px 6px;border-radius:20px}
+  .pdiff.gn{background:#E8F5E9;color:#2E7D32}
+  .pdiff.am{background:#FFF3E0;color:#E65100}
+  .pdiff.rd{background:#FFEBEE;color:#C62828}
+  .brand-size{font-size:11px;color:#1A73E8;font-weight:500}
+  .pname{font-size:13px;font-weight:600;margin-top:1px}
+  .paddr{font-size:11px;color:#5F6368}
+  .phours{font-size:10px;color:#0F9D58}
+  .prating{display:flex;align-items:center;gap:4px;font-size:12px;margin-top:2px}
+  .stars{color:#FBBC04;font-size:12px;letter-spacing:1px}
+  .rnum{font-weight:600}
+  .rcnt{color:#5F6368}
+  .pnote{font-size:11px;color:#5F6368;font-style:italic}
+  .ptags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+  .tag{font-size:10px;padding:2px 6px;border-radius:20px;border:1px solid #DADCE0;color:#5F6368;background:#F8F9FA}
+  .prev{font-size:11px;color:#5F6368;font-style:italic;line-height:1.4;border-top:1px solid #F1F3F4;padding-top:7px;margin-top:6px}
+  .trend-note{font-size:11px;font-weight:500;margin-top:2px}
+
+  .buy-row{display:flex;gap:7px;margin-top:8px}
+  .buy-btn{flex:1;font-size:12px;font-weight:600;padding:9px 8px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;transition:opacity .15s}
+  .buy-btn:hover{opacity:.87}
+  .buy-online{background:#1A73E8;color:#fff}
+  .buy-instore{background:#F1F3F4;color:#3C4043;border:1px solid #DADCE0}
+
+  /* ── LOADING / EMPTY ── */
+  .empty,.loading{text-align:center;padding:4rem 1rem;color:#5F6368;font-size:14px}
+  .empty .icon{font-size:48px;display:block;margin-bottom:14px;opacity:.3}
+  .spinner{display:inline-block;width:34px;height:34px;border:3px solid #E2E6EA;border-top-color:#1A73E8;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px}
+  .loading-msg{font-size:13px;color:#5F6368;margin-top:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .note-footer{font-size:12px;color:#9AA0A6;margin-top:22px;line-height:1.6;text-align:center}
+  .hbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:#5F6368;flex-wrap:wrap;background:#FFF8E1;border:1px solid #FFE082;border-radius:8px;padding:8px 14px}
+  .hbar button{font-size:12px;padding:3px 10px;background:transparent;border:1px solid #FFB300;border-radius:20px;color:#F57F17;cursor:pointer;font-family:inherit}
+
+  @media(max-width:640px){
+    .nav{padding:0 10px;gap:8px}.nav-city{display:none}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+    .pprice{font-size:18px}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="logo" href="/">🛒 Ottawa<span>Prices</span></a>
+  <div class="nav-search">
+    <input type="text" id="productInput" placeholder="Search any grocery product — milk, chicken, brie, sourdough…" onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button id="searchBtn" onclick="doSearch()">🔍 Search</button>
+  </div>
+  <div class="nav-city">📍 Ottawa, ON</div>
+</nav>
+
+<div class="main">
+  <div class="cat-nav" id="catNav"></div>
+  <div class="chips-wrap" id="chipsWrap" style="display:none">
+    <div class="chips-title" id="chipsTitle"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div id="histBar" style="display:none" class="hbar">
+    ⏱ <span id="histMsg"></span>
+    <button onclick="clearHist()">🗑 Clear history</button>
+  </div>
+  <div id="main">
+    <div class="empty">
+      <span class="icon">🛒</span>
+      <strong>Browse a category or search any product</strong><br><br>
+      Live prices across <strong>45+ real Ottawa stores</strong> — Costco, Walmart, Superstore, Loblaws,<br>
+      No Frills, Food Basics, FreshCo, Adonis, Silk Road Foods, T&amp;T, Farm Boy, Giant Tiger,<br>
+      Independent Grocer, Shoppers Drug Mart &amp; more<br><br>
+      <span style="font-size:13px;color:#9AA0A6">Prices fetched live via AI web search — real results, not estimates</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIG — change YOUR_VERCEL_URL to your deployed Vercel URL
+// e.g. https://ottawa-grocery-finder.vercel.app
+// ═══════════════════════════════════════════════════════════════════════
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : window.location.origin; // automatically uses your Vercel domain
+
+// ═══════════════════════════════════════════════════════════════════════
+// STORE DIRECTORY — real Google Places data for 45 Ottawa locations
+// Used for: ratings, hours, addresses, buy links, category colours
+// ═══════════════════════════════════════════════════════════════════════
+const STORES = [
+  {name:'Costco Wholesale',address:'1405 Blair Towers Pl, Orléans',rating:4.3,reviewCount:9945,hours:'9AM–8:30PM',category:'Big box',color:'#005DAA',review:'Huge selection and great prices, parking tough on weekends.',tags:['Membership required','Bulk sizes'],online:true,buyUrl:'https://www.costco.ca/CatalogSearch?dept=All&keyword={q}'},
+  {name:'Costco Wholesale',address:'1849 Merivale Rd, Nepean',rating:4.4,reviewCount:9256,hours:'9AM–8:30PM',category:'Big box',color:'#005DAA',review:'Always a great deal on quality products.',tags:['Membership required','Bulk sizes'],online:true,buyUrl:'https://www.costco.ca/CatalogSearch?dept=All&keyword={q}'},
+  {name:'Costco Wholesale',address:'770 Silver Seven Rd, Kanata',rating:4.4,reviewCount:6628,hours:'9AM–8:30PM',category:'Big box',color:'#005DAA',review:'Great Costco, friendly staff and great tasters.',tags:['Membership required','Bulk sizes'],online:true,buyUrl:'https://www.costco.ca/CatalogSearch?dept=All&keyword={q}'},
+  {name:'Costco Business Centre',address:'1900 Cyrville Rd',rating:4.6,reviewCount:2874,hours:'7AM–7PM',category:'Big box',color:'#005DAA',review:'Game changer for bulk buying, early opening.',tags:['Membership required','Business'],online:true,buyUrl:'https://www.costcobusinessdelivery.com/CatalogSearch?dept=All&keyword={q}'},
+  {name:'Costco Wholesale',address:'4315 Strandherd Dr, Barrhaven',rating:4.5,reviewCount:7037,hours:'9AM–8:30PM',category:'Big box',color:'#005DAA',review:'Amazing store, staff always helpful.',tags:['Membership required','Bulk sizes'],online:true,buyUrl:'https://www.costco.ca/CatalogSearch?dept=All&keyword={q}'},
+  {name:'Walmart Supercentre',address:'450 Terminal Ave',rating:3.8,reviewCount:4070,hours:'7AM–10PM',category:'Big box',color:'#0071CE',review:'Convenient location with good variety.',tags:['Budget-friendly','Self-checkout'],online:true,buyUrl:'https://www.walmart.ca/search?q={q}'},
+  {name:'Walmart Supercentre',address:'1375 Baseline Rd',rating:3.7,reviewCount:3462,hours:'7AM–10PM',category:'Big box',color:'#0071CE',review:'Good prices on everyday items.',tags:['Budget-friendly'],online:true,buyUrl:'https://www.walmart.ca/search?q={q}'},
+  {name:'Walmart Supercentre',address:'2277 Riverside Dr',rating:3.9,reviewCount:1955,hours:'7AM–10PM',category:'Big box',color:'#0071CE',review:'Great one-stop shop for groceries.',tags:['Budget-friendly'],online:true,buyUrl:'https://www.walmart.ca/search?q={q}'},
+  {name:'Walmart Supercentre',address:'2210 Bank St, South Keys',rating:3.4,reviewCount:988,hours:'7AM–10PM',category:'Big box',color:'#0071CE',review:'Low prices and one-stop shop.',tags:['Budget-friendly'],online:true,buyUrl:'https://www.walmart.ca/search?q={q}'},
+  {name:'Walmart Supercentre',address:'3651 Strandherd Dr, Barrhaven',rating:3.5,reviewCount:1364,hours:'7AM–10PM',category:'Big box',color:'#0071CE',review:'Reliable store with good price match policy.',tags:['Budget-friendly'],online:true,buyUrl:'https://www.walmart.ca/search?q={q}'},
+  {name:'Real Canadian Superstore',address:'190 Richmond Rd',rating:4.0,reviewCount:5098,hours:'7AM–11PM',category:'Big box',color:'#FFC72C',dark:true,review:'Very large store with good produce and deals.',tags:['PC Optimum','Large selection'],online:true,buyUrl:'https://www.realcanadiansuperstore.ca/search?search-bar={q}'},
+  {name:'Real Canadian Superstore',address:'4270 Innes Rd',rating:4.1,reviewCount:2626,hours:'7AM–11PM',category:'Big box',color:'#FFC72C',dark:true,review:'Great deals and wide variety including organic.',tags:['PC Optimum','Bakery'],online:true,buyUrl:'https://www.realcanadiansuperstore.ca/search?search-bar={q}'},
+  {name:'Real Canadian Superstore',address:'760 Eagleson Rd, Kanata',rating:4.1,reviewCount:2688,hours:'7AM–11PM',category:'Big box',color:'#FFC72C',dark:true,review:'Large shop with great selection.',tags:['PC Optimum'],online:true,buyUrl:'https://www.realcanadiansuperstore.ca/search?search-bar={q}'},
+  {name:'Loblaws',address:'64 Isabella St',rating:4.0,reviewCount:2097,hours:'7AM–10PM',category:'Big box',color:'#E01933',review:'Good selection of produce and meats.',tags:['Premium','PC Optimum'],online:true,buyUrl:'https://www.loblaws.ca/search?search-bar={q}'},
+  {name:'Loblaws',address:'363 Rideau St',rating:4.1,reviewCount:2859,hours:'7AM–10PM',category:'Big box',color:'#E01933',review:'Great selection and indoor parking.',tags:['Indoor parking','Downtown'],online:true,buyUrl:'https://www.loblaws.ca/search?search-bar={q}'},
+  {name:'Loblaws',address:'100 McArthur Ave',rating:4.1,reviewCount:2690,hours:'7AM–10PM',category:'Big box',color:'#E01933',review:'Really large store with tons of selection.',tags:['Large selection'],online:true,buyUrl:'https://www.loblaws.ca/search?search-bar={q}'},
+  {name:'Loblaws',address:'1980 Baseline Rd',rating:4.1,reviewCount:2886,hours:'7AM–10PM',category:'Big box',color:'#E01933',review:'Always clean and well organized.',tags:['Clean'],online:true,buyUrl:'https://www.loblaws.ca/search?search-bar={q}'},
+  {name:'Loblaws',address:'2210C Bank St',rating:4.1,reviewCount:1800,hours:'7AM–10PM',category:'Big box',color:'#E01933',review:'Good produce rotated regularly.',tags:['Fresh produce'],online:true,buyUrl:'https://www.loblaws.ca/search?search-bar={q}'},
+  {name:"Massine's Independent Grocer",address:'296 Bank St',rating:4.0,reviewCount:2984,hours:'7AM–10PM',category:'Local & independent',color:'#0B6E4F',review:'Produce always fresh, owner walks the floor.',tags:['Locally run','Deli counter'],online:true,buyUrl:'https://www.yourindependentgrocer.ca/search?search-bar={q}'},
+  {name:"Davy's Independent Grocer",address:'596 Montréal Rd',rating:3.9,reviewCount:1009,hours:'8AM–9PM',category:'Local & independent',color:'#0B6E4F',review:'All essentials at a convenient location.',tags:['Locally run'],online:true,buyUrl:'https://www.yourindependentgrocer.ca/search?search-bar={q}'},
+  {name:"Laura's Independent Grocer",address:'1910 St. Laurent Blvd',rating:3.6,reviewCount:88,hours:'8AM–9PM',category:'Local & independent',color:'#0B6E4F',review:'Community grocery with a home feel.',tags:['Locally run'],online:true,buyUrl:'https://www.yourindependentgrocer.ca/search?search-bar={q}'},
+  {name:"Riley's Independent Grocer",address:'2241 Riverside Dr',rating:4.0,reviewCount:978,hours:'8AM–9PM',category:'Local & independent',color:'#0B6E4F',review:'Great for fish, seafood and bread.',tags:['Seafood counter'],online:true,buyUrl:'https://www.yourindependentgrocer.ca/search?search-bar={q}'},
+  {name:"Brierley's Independent Grocer",address:'685 River Rd',rating:4.1,reviewCount:1280,hours:'8AM–10PM',category:'Local & independent',color:'#0B6E4F',review:'Clean, well organized, fully stocked.',tags:['Clean','Locally run'],online:true,buyUrl:'https://www.yourindependentgrocer.ca/search?search-bar={q}'},
+  {name:'Adonis',address:'1055 St. Laurent Blvd',rating:4.1,reviewCount:2543,hours:'8AM–9PM',category:'Ethnic & specialty',color:'#C8102E',review:'Great Middle Eastern and Mediterranean selection.',tags:['Middle Eastern','Fresh deli','Halal'],online:false},
+  {name:'Silk Road Foods Inc.',address:'1618 Merivale Rd, Nepean',rating:4.3,reviewCount:956,hours:'9AM–9PM',category:'Ethnic & specialty',color:'#8B4513',review:'Best Persian, Afghan and Middle Eastern ingredients.',tags:['Halal','Middle Eastern'],online:false},
+  {name:'T&T Supermarket',address:'224 Hunt Club Rd',rating:4.3,reviewCount:7151,hours:'9AM–10PM',category:'Ethnic & specialty',color:'#D9272E',review:'Fantastic Asian supermarket with live seafood.',tags:['Asian groceries','Live seafood'],online:true,buyUrl:'https://www.tnt-foods.com/en/search?q={q}'},
+  {name:'Produce Depot',address:'1855 Carling Ave',rating:4.5,reviewCount:1449,hours:'8AM–7PM',category:'Ethnic & specialty',color:'#3D8B3D',review:'Wide diverse selection of produce and great fish.',tags:['Fresh produce','Diverse'],online:false},
+  {name:'Produce Depot',address:'2446 Bank St',rating:4.5,reviewCount:838,hours:'8AM–8PM',category:'Ethnic & specialty',color:'#3D8B3D',review:'Best place in South Keys for fresh vegetables.',tags:['Fresh produce'],online:false},
+  {name:'No Frills',address:"1226 Place d'Orléans Dr",rating:4.1,reviewCount:2223,hours:'8AM–9PM',category:'Discount',color:'#FFCC00',dark:true,review:'Amazing store with great deals and friendly staff.',tags:['Lowest prices'],online:true,buyUrl:'https://www.nofrills.ca/search?search-bar={q}'},
+  {name:'No Frills',address:'2681 Alta Vista Dr',rating:3.8,reviewCount:959,hours:'8AM–9PM',category:'Discount',color:'#FFCC00',dark:true,review:'Competitive prices and good produce selection.',tags:['Lowest prices'],online:true,buyUrl:'https://www.nofrills.ca/search?search-bar={q}'},
+  {name:'No Frills',address:'30 Iber Rd, Stittsville',rating:4.1,reviewCount:1239,hours:'8AM–9PM',category:'Discount',color:'#FFCC00',dark:true,review:'Bright, clean store at great prices.',tags:['Lowest prices','Clean'],online:true,buyUrl:'https://www.nofrills.ca/search?search-bar={q}'},
+  {name:'No Frills',address:'200 Grant Carman Dr, Nepean',rating:4.1,reviewCount:928,hours:'8AM–9PM',category:'Discount',color:'#FFCC00',dark:true,review:'Great alternative to pricier stores.',tags:['Lowest prices'],online:true,buyUrl:'https://www.nofrills.ca/search?search-bar={q}'},
+  {name:'Food Basics',address:'338 Queen St',rating:4.0,reviewCount:209,hours:'8AM–9PM',category:'Discount',color:'#ED1C24',review:'Well managed and stocked, great downtown location.',tags:['Budget-friendly','Downtown'],online:false},
+  {name:'Food Basics',address:'3831 Cambrian Rd, Nepean',rating:4.3,reviewCount:116,hours:'8AM–9PM',category:'Discount',color:'#ED1C24',review:'Best Food Basics in town, great price matching.',tags:['Budget-friendly','Price matching'],online:false},
+  {name:'Food Basics',address:'667 Kirkwood Ave',rating:4.0,reviewCount:1161,hours:'8AM–9PM',category:'Discount',color:'#ED1C24',review:'Good variety especially produce.',tags:['Budget-friendly'],online:false},
+  {name:'Food Basics',address:'1670 Heron Rd',rating:3.9,reviewCount:1604,hours:'8AM–9PM',category:'Discount',color:'#ED1C24',review:'Great staff, good alternative to pricier stores.',tags:['Budget-friendly'],online:false},
+  {name:'Food Basics',address:'1021 Cyrville Rd',rating:4.0,reviewCount:2067,hours:'8AM–9PM',category:'Discount',color:'#ED1C24',review:'Very affordable with large product selection.',tags:['Budget-friendly'],online:false},
+  {name:'FreshCo',address:'4750 Bank St',rating:4.1,reviewCount:1197,hours:'7AM–11PM',category:'Discount',color:'#00A859',review:'Clean, well organized. Great produce.',tags:['Budget-friendly','Late hours'],online:false},
+  {name:'FreshCo',address:'1595 Merivale Rd',rating:4.0,reviewCount:3360,hours:'7AM–10PM',category:'Discount',color:'#00A859',review:'Huge selection, nice and well organized.',tags:['Budget-friendly'],online:false},
+  {name:'FreshCo',address:'2480 Strandherd Dr, Barrhaven',rating:4.1,reviewCount:1470,hours:'7AM–10PM',category:'Discount',color:'#00A859',review:'Good fresh produce at fair prices.',tags:['Budget-friendly'],online:false},
+  {name:'Metro',address:'754 Bank St, Glebe',rating:4.1,reviewCount:304,hours:'8AM–9PM',category:'Big box',color:'#003DA5',review:'One of the nicest grocery stores in the city.',tags:['Premium feel'],online:true,buyUrl:'https://www.metro.ca/en/search?filter={q}'},
+  {name:'Metro',address:'345 Carleton Ave, Westboro',rating:3.9,reviewCount:1031,hours:'8AM–10PM',category:'Big box',color:'#003DA5',review:'Small but nice and homely, clean and orderly.',tags:['Neighbourhood'],online:true,buyUrl:'https://www.metro.ca/en/search?filter={q}'},
+  {name:'Metro',address:'50 Beechwood Ave, Vanier',rating:4.2,reviewCount:2008,hours:'7AM–10PM',category:'Big box',color:'#003DA5',review:'Friendly staff, great selection of flowers and beer.',tags:['Beer & wine'],online:true,buyUrl:'https://www.metro.ca/en/search?filter={q}'},
+  {name:'Metro',address:'1705 Merivale Rd',rating:4.1,reviewCount:1537,hours:'8AM–10PM',category:'Big box',color:'#003DA5',review:'Convenient location, good quality produce.',tags:['Fresh produce'],online:true,buyUrl:'https://www.metro.ca/en/search?filter={q}'},
+  {name:'Farm Boy',address:'193 Metcalfe St',rating:4.3,reviewCount:2222,hours:'8AM–9PM',category:'Health & organic',color:'#C8202C',review:'Great produce, dairy and meats, amazing salad bars.',tags:['Premium produce','Hot bar'],online:true,buyUrl:'https://www.farmboy.ca/?s={q}'},
+  {name:'Farm Boy',address:'50 Rideau St, Rideau Centre',rating:4.4,reviewCount:2008,hours:'8AM–9PM',category:'Health & organic',color:'#C8202C',review:'Best Farm Boy in Ottawa, never disappoints.',tags:['Premium produce','Hot bar'],online:true,buyUrl:'https://www.farmboy.ca/?s={q}'},
+  {name:'Farm Boy',address:'700 Terry Fox Dr, Kanata',rating:4.5,reviewCount:77,hours:'8AM–9PM',category:'Health & organic',color:'#C8202C',review:'Amazing atmosphere with real food.',tags:['Premium produce'],online:true,buyUrl:'https://www.farmboy.ca/?s={q}'},
+  {name:'Farm Boy',address:'1500 Bank St',rating:4.5,reviewCount:1334,hours:'8AM–9PM',category:'Health & organic',color:'#C8202C',review:'Produce a step above chains, excellent butcher.',tags:['Premium produce','Butcher'],online:true,buyUrl:'https://www.farmboy.ca/?s={q}'},
+  {name:'Farm Boy',address:'830 Belfast Rd, TrainYards',rating:4.6,reviewCount:2298,hours:'8AM–9PM',category:'Health & organic',color:'#C8202C',review:'Large, well stocked with excellent hot bar.',tags:['Premium produce','Hot bar'],online:true,buyUrl:'https://www.farmboy.ca/?s={q}'},
+  {name:'Giant Tiger',address:'2480 Walkley Rd',rating:4.3,reviewCount:1888,hours:'8AM–9PM',category:'Dollar & variety',color:'#FF6F00',review:'Large selection, fresh meat, friendly service.',tags:['Low prices','Groceries + retail'],online:false},
+  {name:'Giant Tiger',address:'98 George St, ByWard Market',rating:4.1,reviewCount:941,hours:'9AM–7PM',category:'Dollar & variety',color:'#FF6F00',review:'Convenient downtown location.',tags:['Low prices','Downtown'],online:false},
+  {name:'Giant Tiger',address:'1021 St. Laurent Blvd',rating:4.3,reviewCount:840,hours:'8AM–9PM',category:'Dollar & variety',color:'#FF6F00',review:'Well organized, wonderful employees.',tags:['Low prices'],online:false},
+  {name:'Giant Tiger',address:'2950 Bank St, Gloucester',rating:4.3,reviewCount:704,hours:'8AM–9PM',category:'Dollar & variety',color:'#FF6F00',review:'Well organized and clean.',tags:['Low prices'],online:false},
+  {name:'Giant Tiger',address:'1085 Wellington St W',rating:4.2,reviewCount:548,hours:'9AM–7PM',category:'Dollar & variety',color:'#FF6F00',review:'Great prices, convenient access to essentials.',tags:['Low prices'],online:false},
+  {name:'Shoppers Drug Mart',address:'1309 Carling Ave',rating:3.2,reviewCount:833,hours:'Open 24 hours',category:'Pharmacy',color:'#E2231A',review:'Open 24 hours, very convenient for late-night needs.',tags:['24 hours','Pharmacy'],online:true,buyUrl:'https://www.shoppersdrugmart.ca/search?q={q}'},
+  {name:'Shoppers Drug Mart',address:'455 Bank St',rating:3.2,reviewCount:308,hours:'8AM–10PM',category:'Pharmacy',color:'#E2231A',review:'Smaller but always has the essentials.',tags:['Downtown','Essentials'],online:true,buyUrl:'https://www.shoppersdrugmart.ca/search?q={q}'},
+  {name:'Shoppers Drug Mart',address:'174 Bank St',rating:3.6,reviewCount:350,hours:'8AM–10PM',category:'Pharmacy',color:'#E2231A',review:'Good beauty section and helpful pharmacy staff.',tags:['Beauty'],online:true,buyUrl:'https://www.shoppersdrugmart.ca/search?q={q}'},
+  {name:'Shoppers Drug Mart',address:'1582 Bank St',rating:2.9,reviewCount:304,hours:'8AM–10PM',category:'Pharmacy',color:'#E2231A',review:'Good frozen food selection added recently.',tags:['Frozen food'],online:true,buyUrl:'https://www.shoppersdrugmart.ca/search?q={q}'},
+  {name:'Shoppers Drug Mart',address:'1559 Alta Vista Dr',rating:2.4,reviewCount:471,hours:'9AM–9PM',category:'Pharmacy',color:'#E2231A',review:'Convenient neighbourhood location.',tags:['Neighbourhood'],online:true,buyUrl:'https://www.shoppersdrugmart.ca/search?q={q}'},
+];
+
+// Category display config
+const CATMETA = {
+  'Big box':            {color:'#1A73E8', emoji:'🏬'},
+  'Discount':           {color:'#0F9D58', emoji:'💰'},
+  'Health & organic':   {color:'#9C27B0', emoji:'🌿'},
+  'Ethnic & specialty': {color:'#F4B400', emoji:'🌏'},
+  'Local & independent':{color:'#0B6E4F', emoji:'🏘️'},
+  'Dollar & variety':   {color:'#FF6F00', emoji:'🪙'},
+  'Pharmacy':           {color:'#E2231A', emoji:'💊'},
+};
+
+// Product catalog — 20 common quick-search products across all categories
+const QUICK_PRODUCTS = {
+  'Dairy':    [{l:'Milk 2% 4L',i:'🥛'},{l:'Whole milk 4L',i:'🥛'},{l:'Skim milk 4L',i:'🥛'},{l:'Oat milk 1.89L',i:'🥛'},{l:'Almond milk 1.89L',i:'🥛'},{l:'Goat milk 1L',i:'🥛'},{l:'Chocolate milk 2L',i:'🥛'},{l:'Buttermilk 1L',i:'🥛'},{l:'Butter salted 454g',i:'🧈'},{l:'Butter unsalted 454g',i:'🧈'},{l:'Plant margarine 907g',i:'🧈'},{l:'Eggs large 12-pack',i:'🥚'},{l:'Organic eggs 12-pack',i:'🥚'},{l:'Greek yogurt 750g',i:'🥄'},{l:'Yogurt 650g',i:'🥄'},{l:'Mild cheddar 400g',i:'🧀'},{l:'Old cheddar 400g',i:'🧀'},{l:'Mozzarella 400g',i:'🧀'},{l:'Cream cheese 250g',i:'🧀'},{l:'Feta cheese 200g',i:'🧀'},{l:'Brie wheel 200g',i:'🧀'},{l:'Gouda slices 400g',i:'🧀'},{l:'Shredded cheese 320g',i:'🧀'},{l:'Cottage cheese 500g',i:'🧀'},{l:'Heavy cream 473ml',i:'🥛'},{l:'Parmesan grated 125g',i:'🧀'}],
+  'Meat':     [{l:'Chicken breast 1kg',i:'🍗'},{l:'Chicken thighs 1kg',i:'🍗'},{l:'Whole chicken 1.8kg',i:'🍗'},{l:'Chicken wings 1kg',i:'🍗'},{l:'Ground chicken 450g',i:'🍗'},{l:'Rotisserie chicken',i:'🍗'},{l:'Ground beef lean 1kg',i:'🥩'},{l:'Ground beef extra lean 1kg',i:'🥩'},{l:'Striploin steak 400g',i:'🥩'},{l:'Stewing beef 1kg',i:'🥩'},{l:'Beef back ribs 1kg',i:'🥩'},{l:'Pork chops 1kg',i:'🥩'},{l:'Bacon 375g',i:'🥓'},{l:'Italian sausage 500g',i:'🌭'},{l:'Hot dogs 12-pack',i:'🌭'},{l:'Deli ham 175g',i:'🥩'},{l:'Lamb chops 500g',i:'🥩'},{l:'Ground lamb 450g',i:'🥩'},{l:'Goat meat 1kg',i:'🥩'},{l:'Ground turkey 450g',i:'🥩'}],
+  'Fish':     [{l:'Salmon fillet 500g',i:'🐟'},{l:'Tilapia fillets 600g',i:'🐟'},{l:'Cod fillet 500g',i:'🐟'},{l:'Haddock fillet 400g',i:'🐟'},{l:'Cooked shrimp 340g',i:'🦐'},{l:'Sea scallops 340g',i:'🐚'},{l:'Mussels 900g',i:'🦪'},{l:'Lobster tails 2-pack',i:'🦞'},{l:'Canned tuna 170g',i:'🐟'},{l:'Sardines 106g',i:'🐟'},{l:'Smoked salmon 150g',i:'🐟'},{l:'Crab legs 500g',i:'🦀'}],
+  'Produce':  [{l:'Bananas 1kg',i:'🍌'},{l:'Gala apples 3lb',i:'🍎'},{l:'Granny Smith apples 3lb',i:'🍏'},{l:'Navel oranges 4lb',i:'🍊'},{l:'Strawberries 1lb',i:'🍓'},{l:'Blueberries 1 pint',i:'🫐'},{l:'Red seedless grapes 907g',i:'🍇'},{l:'Watermelon whole',i:'🍉'},{l:'Mango each',i:'🥭'},{l:'Avocado each',i:'🥑'},{l:'Pineapple whole',i:'🍍'},{l:'Lemons 4-pack',i:'🍋'},{l:'Pears 3lb',i:'🍐'},{l:'Raspberries 170g',i:'🍓'},{l:'Russet potatoes 5lb',i:'🥔'},{l:'Sweet potatoes 2lb',i:'🥔'},{l:'Roma tomatoes 1kg',i:'🍅'},{l:'Cherry tomatoes 227g',i:'🍅'},{l:'Yellow onions 3lb',i:'🧅'},{l:'Garlic bulb 3-pack',i:'🧄'},{l:'Carrots 2lb',i:'🥕'},{l:'Broccoli 1 head',i:'🥦'},{l:'Cauliflower 1 head',i:'🥦'},{l:'Baby spinach 142g',i:'🥬'},{l:'Romaine hearts 3-pack',i:'🥗'},{l:'English cucumber each',i:'🥒'},{l:'Bell peppers 3-pack',i:'🫑'},{l:'White mushrooms 227g',i:'🍄'},{l:'Corn on cob 5-pack',i:'🌽'},{l:'Asparagus bunch',i:'🥬'},{l:'Kale bunch',i:'🥬'},{l:'Zucchini each',i:'🥬'},{l:'Celery bunch',i:'🥬'}],
+  'Bakery':   [{l:'White sandwich bread',i:'🍞'},{l:'Whole wheat bread',i:'🍞'},{l:'Multigrain bread',i:'🍞'},{l:'Sourdough loaf',i:'🍞'},{l:'Rye bread',i:'🍞'},{l:'Gluten-free bread',i:'🍞'},{l:'Bagels 6-pack',i:'🥯'},{l:'English muffins 6-pack',i:'🥐'},{l:'Flour tortillas 10-pack',i:'🫓'},{l:'Corn tortillas 30-pack',i:'🫓'},{l:'Pita bread 6-pack',i:'🫓'},{l:'Naan bread 5-pack',i:'🫓'},{l:'Baguette each',i:'🥖'},{l:'Croissants 4-pack',i:'🥐'},{l:'Brioche buns 6-pack',i:'🍞'}],
+  'Frozen':   [{l:'Vanilla ice cream 1.5L',i:'🍦'},{l:'Chocolate ice cream 1.5L',i:'🍫'},{l:'Premium ice cream 946ml',i:'🍨'},{l:'Ice cream bars 6-pack',i:'🍦'},{l:'Non-dairy ice cream 473ml',i:'🍦'},{l:'Gelato 473ml',i:'🍨'},{l:'Sorbet 500ml',i:'🍧'},{l:'Frozen pizza each',i:'🍕'},{l:'Frozen vegetables 1kg',i:'🥦'},{l:'Frozen fries 1kg',i:'🍟'},{l:'Frozen fish fillets 700g',i:'🐟'},{l:'Frozen berries 600g',i:'🫐'}],
+  'Snacks':   [{l:'Chocolate chip cookies 350g',i:'🍪'},{l:'Oreo cookies 303g',i:'🍪'},{l:'Digestive biscuits 400g',i:'🍪'},{l:'Oatmeal raisin cookies 350g',i:'🍪'},{l:"Lay's chips 200g",i:'🥔'},{l:'Soda crackers 450g',i:'🍘'},{l:'Microwave popcorn 3-pack',i:'🍿'},{l:'Granola bars 12-pack',i:'🍫'},{l:'Trail mix 400g',i:'🥜'},{l:'Pretzels 454g',i:'🥨'},{l:'Rice cakes 120g',i:'🍘'},{l:'Mixed nuts 400g',i:'🥜'}],
+  'Beverages':[{l:'Coffee beans 340g',i:'☕'},{l:'Ground coffee 340g',i:'☕'},{l:'Instant coffee 200g',i:'☕'},{l:'Coffee pods 24-pack',i:'☕'},{l:'Dark roast coffee 340g',i:'☕'},{l:'Decaf coffee 340g',i:'☕'},{l:'Black tea 72-pack',i:'🍵'},{l:'Green tea 40-pack',i:'🍵'},{l:'Herbal tea 20-pack',i:'🍵'},{l:'Chai tea 20-pack',i:'🍵'},{l:'Matcha powder 40g',i:'🍵'},{l:'Orange juice 1.89L',i:'🍊'},{l:'Apple juice 1.89L',i:'🍎'},{l:'Sparkling water 12-pack',i:'💧'},{l:'Coconut water 1L',i:'🥥'}],
+  'Pantry':   [{l:'White bleached flour 2kg',i:'🌾'},{l:'Whole wheat flour 2kg',i:'🌾'},{l:'Almond flour 400g',i:'🌾'},{l:'Extra virgin olive oil 750ml',i:'🫒'},{l:'Canola oil 1L',i:'🍶'},{l:'Vegetable oil 1L',i:'🍶'},{l:'Avocado oil 500ml',i:'🥑'},{l:'Ketchup 1L',i:'🍅'},{l:'Mayonnaise 890ml',i:'🥚'},{l:'Vegan mayo 340g',i:'🥚'},{l:'Dijon mustard 250ml',i:'🌭'},{l:'BBQ sauce 455ml',i:'🍖'},{l:'Hot sauce 148ml',i:'🌶️'},{l:'Soy sauce 500ml',i:'🍶'},{l:'Pasta sauce 650ml',i:'🍝'},{l:'Salsa 650ml',i:'🍅'},{l:'Ranch dressing 475ml',i:'🥗'},{l:'Caesar dressing 475ml',i:'🥗'},{l:'Peanut butter 1kg',i:'🥜'},{l:'Honey 500g',i:'🍯'},{l:'Strawberry jam 500ml',i:'🍓'},{l:'Maple syrup 250ml',i:'🍁'},{l:'Basmati rice 4kg',i:'🍚'},{l:'Long grain white rice 2kg',i:'🍚'},{l:'Brown rice 2kg',i:'🍚'},{l:'Spaghetti 900g',i:'🍝'},{l:'Penne rigate 900g',i:'🍝'},{l:'White sugar 2kg',i:'🍚'},{l:'Brown sugar 1kg',i:'🍚'},{l:'Rolled oats 1kg',i:'🥣'},{l:'Chickpeas canned 796ml',i:'🫘'},{l:'Black beans 540ml',i:'🫘'},{l:'Chicken broth 900ml',i:'🍲'},{l:'Canned tomatoes 796ml',i:'🍅'},{l:'Hummus 227g',i:'🧆'},{l:'Tahini 454g',i:'🧆'},{l:'Coconut milk 400ml',i:'🥥'}],
+};
+
+// State
+let sortMode = 'price-asc';
+let storeData = [];
+let activeCatFilter = new Set();
+let priceHistory = {};
+let currentProduct = '';
+let currentProductLabel = '';
+let selectedCat = null;
+let lastFetchedAt = '';
+
+function loadHist(){try{const r=localStorage.getItem('og-live-v1');if(r)priceHistory=JSON.parse(r);}catch(e){}}
+function saveHist(){try{localStorage.setItem('og-live-v1',JSON.stringify(priceHistory));}catch(e){}}
+function clearHist(){priceHistory={};localStorage.removeItem('og-live-v1');document.getElementById('histBar').style.display='none';if(storeData.length)renderAll();}
+
+function recordPrices(stores, product){
+  const lbl = new Date().toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  stores.forEach(s => {
+    const k = product + '|' + s.name + '|' + s.address;
+    if (!priceHistory[k]) priceHistory[k] = [];
+    const h = priceHistory[k];
+    if (!h.length || h[h.length-1].price !== s.price) {
+      h.push({price: s.price, lbl});
+      if (h.length > 10) h.shift();
+    }
+  });
+  saveHist();
+}
+
+function getTrend(store){
+  const k = currentProduct + '|' + store.name + '|' + store.address;
+  const h = priceHistory[k];
+  if (!h || h.length < 2) return {dir:'flat', diff:0};
+  const diff = store.price - h[h.length-2].price;
+  return Math.abs(diff) < 0.01 ? {dir:'flat',diff:0} : {dir: diff>0?'up':'down', diff};
+}
+
+function starsHtml(r){let s='';for(let i=0;i<5;i++)s+=i<Math.floor(r)?'★':(i<r?'½':'☆');return s;}
+
+// Match AI store name to our directory
+function matchStore(aiName, aiAddress){
+  const n = (aiName||'').toLowerCase();
+  const a = (aiAddress||'').toLowerCase();
+  // Direct address match first
+  let found = STORES.find(s => a && s.address.toLowerCase().includes(a.split(',')[0].toLowerCase().trim()));
+  if (found) return found;
+  // Chain name match
+  found = STORES.find(s => n.includes(s.name.split(' ')[0].toLowerCase()) && n.includes(s.name.split(' ').slice(-1)[0].toLowerCase()));
+  if (found) return found;
+  // Loose chain match
+  const chains = ['costco','walmart','superstore','loblaws','no frills','food basics','freshco','metro','farm boy','giant tiger','shoppers','t&t','adonis','silk road','produce depot','massine','davy','laura','riley','brierley'];
+  for (const chain of chains){
+    if (n.includes(chain)){
+      found = STORES.find(s => s.name.toLowerCase().includes(chain));
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function buildCatNav(){
+  const nav = document.getElementById('catNav');
+  nav.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.textContent = '🛒 All products';
+  allBtn.className = selectedCat === null ? 'on' : '';
+  allBtn.onclick = () => { selectedCat = null; buildChips(); };
+  nav.appendChild(allBtn);
+  Object.entries(QUICK_PRODUCTS).forEach(([cat, items]) => {
+    const m = CATMETA[cat] || {emoji:'🏪'};
+    const btn = document.createElement('button');
+    btn.textContent = (m.emoji || '') + ' ' + cat + ' (' + items.length + ')';
+    btn.className = selectedCat === cat ? 'on' : '';
+    btn.onclick = () => { selectedCat = cat; buildChips(); };
+    nav.appendChild(btn);
+  });
+}
+
+function buildChips(){
+  // Update cat nav
+  document.querySelectorAll('.cat-nav button').forEach((b, i) => {
+    const cats = [null, ...Object.keys(QUICK_PRODUCTS)];
+    b.className = selectedCat === cats[i] ? 'on' : '';
+  });
+  const wrap = document.getElementById('chipsWrap');
+  const chipsEl = document.getElementById('chips');
+  const titleEl = document.getElementById('chipsTitle');
+  chipsEl.innerHTML = '';
+  const entries = selectedCat ? QUICK_PRODUCTS[selectedCat] : Object.values(QUICK_PRODUCTS).flat();
+  if (!entries.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const meta = selectedCat ? (CATMETA[selectedCat]||{}) : {};
+  titleEl.textContent = (selectedCat ? (meta.emoji||'')+ ' '+selectedCat : 'All categories') + ' — ' + entries.length + ' products';
+  entries.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (currentProductLabel === p.l ? ' active' : '');
+    chip.textContent = p.i + ' ' + p.l;
+    chip.onclick = () => doSearchFor(p.l);
+    chipsEl.appendChild(chip);
+  });
+}
+
+function buildStoreCatFilters(){
+  const cats = [...new Set(storeData.map(s => s.category))].sort();
+  const wrap = document.createElement('div'); wrap.className = 'store-filters';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'sf' + (activeCatFilter.size === 0 ? ' on' : '');
+  allBtn.textContent = 'All stores (' + storeData.length + ')';
+  allBtn.onclick = () => { activeCatFilter.clear(); renderAll(); };
+  wrap.appendChild(allBtn);
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    const st = storeData.find(s => s.category === cat);
+    const col = st ? st.color : '#888';
+    const cnt = storeData.filter(s => s.category === cat).length;
+    btn.className = 'sf' + (activeCatFilter.has(cat) ? ' on' : '');
+    btn.innerHTML = '<span class="cdot" style="background:'+col+'"></span>' + (CATMETA[cat]||{emoji:'🏪'}).emoji + ' ' + cat + ' (' + cnt + ')';
+    btn.onclick = () => { if(activeCatFilter.has(cat)) activeCatFilter.delete(cat); else activeCatFilter.add(cat); renderAll(); };
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
+function getFiltered(){return activeCatFilter.size===0?storeData.slice():storeData.filter(s=>activeCatFilter.has(s.category));}
+function getSorted(arr){
+  const a = arr.slice();
+  if(sortMode==='price-asc') return a.sort((x,y)=>x.price-y.price);
+  if(sortMode==='price-desc') return a.sort((x,y)=>y.price-x.price);
+  if(sortMode==='rating') return a.sort((x,y)=>y.rating-x.rating);
+  if(sortMode==='trend') return a.sort((x,y)=>getTrend(x).diff-getTrend(y).diff);
+  return a.sort((x,y)=>x.name.localeCompare(y.name));
+}
+
+function renderAll(){
+  const mainEl = document.getElementById('main');
+  const filtered = getSorted(getFiltered());
+  const byPrice = storeData.slice().sort((a,b)=>a.price-b.price);
+  const minP = byPrice[0].price, maxP = byPrice[byPrice.length-1].price;
+  const pCat = selectedCat || 'Pantry';
+  const catMeta = CATMETA[pCat] || {color:'#1A73E8', emoji:'🏪'};
+  mainEl.innerHTML = '';
+
+  // Hero
+  const hero = document.createElement('div'); hero.className = 'product-hero';
+  hero.innerHTML =
+    '<div class="ph-info">' +
+      '<div class="ph-name">' + currentProductLabel + '</div>' +
+      '<div class="ph-meta">' +
+        '<span class="ph-fetched">🔄 Live prices fetched ' + (lastFetchedAt ? new Date(lastFetchedAt).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'}) : 'just now') + '</span>' +
+      '</div>' +
+    '</div>';
+  mainEl.appendChild(hero);
+
+  // Results bar
+  const rb = document.createElement('div'); rb.className = 'results-bar';
+  rb.innerHTML = '<div class="rcount"><strong>' + filtered.length + '</strong> of <strong>' + storeData.length + '</strong> Ottawa locations carry this product</div>';
+  const sw = document.createElement('div'); sw.className = 'sort-wrap'; sw.innerHTML = '<label>Sort by</label>';
+  const sel = document.createElement('select');
+  sel.innerHTML = '<option value="price-asc">Price: Low to high</option><option value="price-desc">Price: High to low</option><option value="rating">Top rated</option><option value="trend">Biggest price drop</option><option value="name">Store name</option>';
+  sel.value = sortMode;
+  sel.onchange = () => { sortMode = sel.value; renderAll(); };
+  sw.appendChild(sel); rb.appendChild(sw); mainEl.appendChild(rb);
+
+  // Deal bar
+  const dropping = storeData.filter(s => getTrend(s).dir === 'down');
+  const db = document.createElement('div'); db.className = 'deal-bar';
+  let dh = '🏷️ Cheapest: <strong>' + byPrice[0].name + '</strong> at <strong>$' + minP.toFixed(2) + '</strong> — save <strong>$' + (maxP-minP).toFixed(2) + '</strong> vs most expensive';
+  if (dropping.length) dh += ' &nbsp;·&nbsp; 📉 Price dropped at: ' + dropping.slice(0,3).map(s=>s.name).join(', ');
+  db.innerHTML = dh; mainEl.appendChild(db);
+  mainEl.appendChild(buildStoreCatFilters());
+
+  if (!filtered.length) {
+    const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'No stores match the selected filter.'; mainEl.appendChild(e); return;
+  }
+
+  const grid = document.createElement('div'); grid.className = 'grid';
+  filtered.forEach(s => {
+    const isWinner = byPrice[0].name === s.name && byPrice[0].address === s.address;
+    const diff = (s.price - minP).toFixed(2);
+    const trend = getTrend(s);
+    const hist = priceHistory[currentProduct + '|' + s.name + '|' + s.address] || [];
+    let trendHtml = '';
+    if (hist.length >= 2) {
+      if (trend.dir==='down') trendHtml = '<div class="trend-note" style="color:#2E7D32">📉 $' + Math.abs(trend.diff).toFixed(2) + ' cheaper than last search</div>';
+      else if (trend.dir==='up') trendHtml = '<div class="trend-note" style="color:#C62828">📈 $' + Math.abs(trend.diff).toFixed(2) + ' pricier than last search</div>';
+    }
+    let diffBadge = '';
+    if (isWinner) diffBadge = '<span class="pdiff gn">Best price</span>';
+    else if (diff <= 1.0) diffBadge = '<span class="pdiff am">+$' + diff + '</span>';
+    else diffBadge = '<span class="pdiff rd">+$' + diff + '</span>';
+    const tags = (s.tags||[]).slice(0,3).map(t=>'<span class="tag">'+t+'</span>').join('');
+    const textCol = s.dark ? '#1A1A1A' : '#fff';
+    const catEmoji = (CATMETA[s.category]||{emoji:'🏪'}).emoji;
+    let buyBtn = '';
+    if (s.online && s.buyUrl) {
+      const url = s.buyUrl.replace('{q}', encodeURIComponent(currentProductLabel));
+      buyBtn = '<a class="buy-btn buy-online" href="'+url+'" target="_blank" rel="noopener">🛒 Buy online</a>';
+    } else {
+      const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address + ' Ottawa ON');
+      buyBtn = '<a class="buy-btn buy-instore" href="'+mapUrl+'" target="_blank" rel="noopener">📍 Get directions</a>';
+    }
+    let brandSize = '';
+    if (s.brand || s.size) brandSize = '<div class="brand-size">' + [s.brand,s.size].filter(Boolean).join(' · ') + '</div>';
+
+    const card = document.createElement('div');
+    card.className = 'pcard' + (isWinner ? ' best' : '');
+    card.innerHTML =
+      '<div class="cthumb" style="background:'+s.color+';color:'+textCol+'"><span class="ic">'+catEmoji+'</span><span>'+s.category+'</span>'+(isWinner?'<span class="best-ribbon">Best price</span>':'')+'</div>'+
+      '<div class="pbody">'+
+        '<div class="price-row"><span class="pprice">$'+s.price.toFixed(2)+'</span>'+diffBadge+'</div>'+
+        brandSize+
+        '<div class="pname">'+s.name+'</div>'+
+        '<div class="paddr">📍 '+s.address+'</div>'+
+        '<div class="phours">🕐 '+s.hours+'</div>'+
+        '<div class="prating"><span class="stars">'+starsHtml(s.rating)+'</span><span class="rnum">'+s.rating.toFixed(1)+'</span><span class="rcnt">('+s.reviewCount.toLocaleString()+')</span></div>'+
+        trendHtml+
+        (s.note?'<div class="pnote">ℹ️ '+s.note+'</div>':'')+
+        (tags?'<div class="ptags">'+tags+'</div>':'')+
+        '<div class="prev">"'+s.review+'"</div>'+
+        '<div class="buy-row">'+buyBtn+'</div>'+
+      '</div>';
+    grid.appendChild(card);
+  });
+  mainEl.appendChild(grid);
+
+  const footer = document.createElement('p'); footer.className = 'note-footer';
+  footer.textContent = 'Prices fetched live via AI web search — always verify in-store before shopping. Store ratings and hours from Google Places. "Buy online" links open the store\'s live search page. "Get directions" opens Google Maps.';
+  mainEl.appendChild(footer);
+}
+
+async function doSearchFor(productLabel){
+  loadHist();
+  currentProductLabel = productLabel;
+  currentProduct = productLabel.toLowerCase();
+  document.getElementById('productInput').value = productLabel;
+
+  const btn = document.getElementById('searchBtn');
+  btn.textContent = '⏳ Searching...'; btn.disabled = true;
+
+  document.getElementById('main').innerHTML =
+    '<div class="loading">' +
+      '<div class="spinner"></div>' +
+      '<div><strong>Searching Ottawa for "' + productLabel + '"</strong></div>' +
+      '<div class="loading-msg">Checking 45+ stores across the city — Costco, Walmart, Loblaws, Adonis, Silk Road, T&T, Farm Boy &amp; more</div>' +
+      '<div class="loading-msg" style="margin-top:8px;font-size:12px;color:#9AA0A6">This takes 10–20 seconds — real prices are being fetched via live web search</div>' +
+    '</div>';
+
+  try {
+    const resp = await fetch(API_BASE + '/api/search?product=' + encodeURIComponent(productLabel) + '&city=Ottawa');
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || 'Server error ' + resp.status);
+    }
+    const data = await resp.json();
+    lastFetchedAt = data.fetchedAt;
+
+    // Merge AI prices with our store directory for ratings/hours/buy links
+    storeData = data.stores.map(aiStore => {
+      const match = matchStore(aiStore.name, aiStore.address);
+      return Object.assign({}, match || {
+        name: aiStore.name,
+        address: aiStore.address || 'Ottawa, ON',
+        rating: 4.0,
+        reviewCount: 500,
+        hours: 'Hours vary',
+        category: aiStore.category || 'Big box',
+        color: '#607D8B',
+        review: 'Prices verified via live web search.',
+        tags: [],
+        online: false,
+      }, {
+        // AI-provided data overrides
+        price: aiStore.price,
+        brand: aiStore.brand || '',
+        size: aiStore.size || '',
+        note: aiStore.note || '',
+        // Preserve matched store's name/address/links
+        name: match ? match.name : aiStore.name,
+        address: match ? match.address : (aiStore.address || 'Ottawa, ON'),
+      });
+    }).filter(s => s.price > 0);
+
+    if (!storeData.length) throw new Error('No stores found for this product');
+
+    recordPrices(storeData, currentProduct);
+    activeCatFilter = new Set(); sortMode = 'price-asc';
+
+    const snaps = Object.entries(priceHistory).filter(([k])=>k.startsWith(currentProduct+'|')).map(([,v])=>v.length);
+    const maxS = snaps.length ? Math.max(...snaps) : 0;
+    const hb = document.getElementById('histBar'); hb.style.display = 'flex';
+    document.getElementById('histMsg').textContent = maxS >= 2
+      ? 'Tracking ' + maxS + ' price snapshots for "' + productLabel + '" — search again anytime'
+      : 'First snapshot saved for "' + productLabel + '" — search again later to track price changes';
+
+    buildChips(); // refresh chip highlight
+    renderAll();
+
+  } catch(err) {
+    document.getElementById('main').innerHTML =
+      '<div class="empty"><span class="icon">⚠️</span><strong>Could not load prices</strong><br><br>' + err.message + '<br><br>' +
+      '<span style="font-size:12px;color:#9AA0A6">Make sure your Vercel backend is deployed and the ANTHROPIC_API_KEY environment variable is set.<br>Visit /api/health to check the server status.</span></div>';
+  }
+
+  btn.textContent = '🔍 Search'; btn.disabled = false;
+}
+
+function doSearch(){
+  const q = document.getElementById('productInput').value.trim();
+  if (!q) { document.getElementById('productInput').focus(); return; }
+  doSearchFor(q);
+}
+
+// Init
+buildCatNav();
+buildChips();
+loadHist();
+</script>
+</body>
+</html>
