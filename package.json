@@ -1,0 +1,11 @@
+{
+  "name": "ottawa-grocery-price-finder",
+  "version": "1.0.0",
+  "description": "Ottawa grocery price comparison app with live AI-powered search",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0"
+  }
+}
